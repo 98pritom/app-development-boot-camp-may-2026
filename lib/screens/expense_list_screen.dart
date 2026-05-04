@@ -9,26 +9,22 @@ class ExpenseListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final expenses = <Expense>[
-      Expense(
-        id: 'e1',
-        title: 'Coffee',
+      Expense.create(
         amount: 4.5,
-        date: DateTime.now(),
         category: 'Food',
-      ),
-      Expense(
-        id: 'e2',
-        title: 'Taxi',
-        amount: 18.0,
         date: DateTime.now(),
-        category: 'Travel',
+        note: 'Coffee',
+      ),
+      Expense.create(
+        amount: 18.0,
+        category: 'Transport',
+        date: DateTime.now(),
+        note: 'Taxi',
       ),
     ];
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Expenses'),
-      ),
+      appBar: AppBar(title: const Text('Expenses')),
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemBuilder: (context, index) {
