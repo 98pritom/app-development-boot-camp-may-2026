@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import '../../../../core/models/expense.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -258,13 +259,96 @@ class InsightsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // Category Breakdown Section
-              Text(
-                'Category Breakdown',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
+              // Category Breakdown Pie Chart
+              if (categoryEntries.isNotEmpty) ...[
+                Text(
+                  'Category Breakdown',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: SizedBox(
+                    height: 280,
+                    child: PieChart(
+                      PieChartData(
+                        sections: categoryEntries.asMap().entries.map((entry) {
+                          final categoryEntry = entry.value;
+                          final percentage = thisMonthTotal == 0
+                              ? 0.0
+                              : (categoryEntry.value / thisMonthTotal) * 100;
+                          final categoryColor =
+                              CategoryHelper.getCategoryColor(categoryEntry.key);
+
+                          return PieChartSectionData(
+                            value: categoryEntry.value,
+                            title: '${percentage.toStringAsFixed(1)}%',
+                            radius: 100,
+                            color: categoryColor.withValues(alpha: 0.8),
+                            titleStyle: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          );
+                        }).toList(),
+                        centerSpaceRadius: 40,
+                        sectionsSpace: 2,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // Category Legend
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: categoryEntries.map((entry) {
+                    final categoryColor =
+                        CategoryHelper.getCategoryColor(entry.key);
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: categoryColor.withValues(alpha: 0.8),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          entry.key,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // Category Breakdown Section
+              // Text(
+              //   'Category Breakdown',
+              //   style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              //     fontWeight: FontWeight.w700,
+              //   ),
+              // ),
               const SizedBox(height: 12),
               if (categoryEntries.isEmpty)
                 Container(
@@ -380,17 +464,152 @@ class InsightsScreen extends StatelessWidget {
                 ),
               const SizedBox(height: 24),
 
-              // Monthly Trend Section
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Spending Trend',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
+              // Spending Trend Bar Chart
+              if (monthEntries.isNotEmpty) ...[
+                Text(
+                  'Spending Trend',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: SizedBox(
+                    height: 280,
+                    child: BarChart(
+                      BarChartData(
+                        barGroups: monthEntries.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final monthEntry = entry.value;
+
+                          return BarChartGroupData(
+                            x: index,
+                            barRods: [
+                              BarChartRodData(
+                                toY: monthEntry.value,
+                                color: const Color(0xFF6C5CE7)
+                                    .withValues(alpha: 0.8),
+                                width: 16,
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(6),
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                return Text(
+                                  '৳${value.toInt()}',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall?.copyWith(
+                                        fontSize: 10,
+                                        color: const Color(0xFF999DAA),
+                                      ),
+                                );
+                              },
+                              reservedSize: 40,
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (value, meta) {
+                                final index = value.toInt();
+                                if (index < 0 || index >= monthEntries.length) {
+                                  return const SizedBox();
+                                }
+                                final entry = monthEntries[index];
+                                final month = entry.key % 100;
+                                final monthName = [
+                                  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+                                ][month - 1];
+                                return Padding(
+                                  padding: const EdgeInsets.only(top: 8.0),
+                                  child: Text(
+                                    monthName,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall?.copyWith(
+                                          fontSize: 10,
+                                          color: const Color(0xFF999DAA),
+                                        ),
+                                  ),
+                                );
+                              },
+                              reservedSize: 30,
+                            ),
+                          ),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                        ),
+                        gridData: FlGridData(
+                          show: true,
+                          drawHorizontalLine: true,
+                          drawVerticalLine: false,
+                          horizontalInterval: null,
+                          getDrawingHorizontalLine: (value) {
+                            return FlLine(
+                              color: Colors.grey.withValues(alpha: 0.1),
+                              strokeWidth: 1,
+                            );
+                          },
+                        ),
+                        barTouchData: BarTouchData(
+                          enabled: true,
+                          touchTooltipData: BarTouchTooltipData(
+                            tooltipRoundedRadius: 8,
+                            getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                              return BarTooltipItem(
+                                '৳${rod.toY.toStringAsFixed(2)}',
+                                const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
                   ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // Monthly Trend Section
+              Row(
+                children: [
+                  // Expanded(
+                  //   child: Text(
+                  //     'Spending Trend',
+                  //     style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  //       fontWeight: FontWeight.w700,
+                  //     ),
+                  //   ),
+                  // ),
                   Container(
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

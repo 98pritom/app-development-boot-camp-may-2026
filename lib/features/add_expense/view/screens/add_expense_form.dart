@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive/hive.dart';
 
 import '../../../../core/models/expense.dart';
 import '../../../../core/constants/app_constants.dart';
@@ -31,6 +30,11 @@ class _AddExpenseFormState extends ConsumerState<AddExpenseForm> {
       text: expense == null ? '' : expense.amount.toString(),
     );
     _noteController = TextEditingController(text: expense?.note ?? '');
+    
+    // Initialize the notifier with existing expense data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(addExpenseProvider.notifier).initializeForm(widget.expense);
+    });
   }
 
   @override
@@ -40,82 +44,16 @@ class _AddExpenseFormState extends ConsumerState<AddExpenseForm> {
     super.dispose();
   }
 
-  Future<void> _pickDate() async {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final earliest =
-        today.subtract(Duration(days: AppConstants.expenseDateRangeDays));
-    final selectedDate =
-        ref.read(addExpenseProvider).selectedDate ?? widget.expense?.date;
-    final currentDate = selectedDate ?? today;
-    final initialDate = currentDate.isBefore(earliest)
-        ? earliest
-        : currentDate.isAfter(today)
-            ? today
-            : currentDate;
-
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: earliest,
-      lastDate: today,
-    );
-
-    if (pickedDate != null) {
-      ref.read(addExpenseProvider.notifier).setSelectedDate(pickedDate);
-    }
-  }
-
-  Future<void> _saveExpense() async {
-    final amountText = _amountController.text.trim();
-    final amount = double.tryParse(amountText) ?? 0.0;
-    final addExpenseState = ref.read(addExpenseProvider);
-    final selectedCategory =
-        addExpenseState.selectedCategory ?? widget.expense?.category;
-    final selectedDate =
-        addExpenseState.selectedDate ?? widget.expense?.date;
-    final category = selectedCategory ?? 'Other';
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final earliest =
-        today.subtract(Duration(days: AppConstants.expenseDateRangeDays));
-    final rawDate = selectedDate ?? today;
-    final date = DateTime(rawDate.year, rawDate.month, rawDate.day);
-    final note = _noteController.text.trim();
-
-    if (date.isAfter(today) || date.isBefore(earliest)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Date must be within the last ${AppConstants.expenseDateRangeDays} days.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    final expense = widget.expense == null
-        ? Expense.create(
-            amount: amount,
-            category: category,
-            date: date,
-            note: note,
-          )
-        : Expense(
-            id: widget.expense!.id,
-            amount: amount,
-            category: category,
-            date: date,
-            note: note,
-          );
-
-    final box = Hive.box<Expense>(AppConstants.expenseBoxName);
-    await box.put(expense.id, expense);
+  Future<void> _handleSaveExpense() async {
+    final notifier = ref.read(addExpenseProvider.notifier);
+    final success = await notifier.saveExpense(widget.expense);
 
     if (!mounted) return;
 
-    ref.read(addExpenseProvider.notifier).resetForm();
-    Navigator.of(context).pop();
+    if (success) {
+      notifier.resetForm();
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -123,14 +61,14 @@ class _AddExpenseFormState extends ConsumerState<AddExpenseForm> {
     final addExpenseState = ref.watch(addExpenseProvider);
     final selectedCategory =
         addExpenseState.selectedCategory ?? widget.expense?.category;
-    final selectedDate =
-        addExpenseState.selectedDate ?? widget.expense?.date;
+    final selectedDate = addExpenseState.selectedDate ?? widget.expense?.date;
+    final isEditing = widget.expense != null;
+    
     final dateLabel = selectedDate == null
         ? 'No date selected'
         : '${selectedDate.year}-'
               '${selectedDate.month.toString().padLeft(2, '0')}-'
               '${selectedDate.day.toString().padLeft(2, '0')}';
-    final isEditing = widget.expense != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -141,6 +79,25 @@ class _AddExpenseFormState extends ConsumerState<AddExpenseForm> {
           padding: const EdgeInsets.all(20),
           child: Column(
             children: [
+              // Error Message
+              if (addExpenseState.error != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    border: Border.all(color: Colors.red.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    addExpenseState.error!,
+                    style: TextStyle(
+                      color: Colors.red.shade700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+
               // Amount Section
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,6 +111,9 @@ class _AddExpenseFormState extends ConsumerState<AddExpenseForm> {
                   const SizedBox(height: 10),
                   TextField(
                     controller: _amountController,
+                    onChanged: (value) {
+                      ref.read(addExpenseProvider.notifier).setAmount(value);
+                    },
                     decoration: InputDecoration(
                       hintText: 'Enter amount',
                       prefixIcon: Padding(
@@ -224,9 +184,7 @@ class _AddExpenseFormState extends ConsumerState<AddExpenseForm> {
                         )
                         .toList(),
                     onChanged: (value) {
-                      ref
-                          .read(addExpenseProvider.notifier)
-                          .setSelectedCategory(value);
+                      ref.read(addExpenseProvider.notifier).setSelectedCategory(value);
                     },
                   ),
                 ],
@@ -245,7 +203,9 @@ class _AddExpenseFormState extends ConsumerState<AddExpenseForm> {
                   ),
                   const SizedBox(height: 10),
                   GestureDetector(
-                    onTap: _pickDate,
+                    onTap: () {
+                      ref.read(addExpenseProvider.notifier).pickDate(context, widget.expense);
+                    },
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       decoration: BoxDecoration(
@@ -296,6 +256,9 @@ class _AddExpenseFormState extends ConsumerState<AddExpenseForm> {
                   const SizedBox(height: 10),
                   TextField(
                     controller: _noteController,
+                    onChanged: (value) {
+                      ref.read(addExpenseProvider.notifier).setNote(value);
+                    },
                     decoration: const InputDecoration(
                       hintText: 'Add a note (optional)',
                       prefixIcon: Icon(Icons.note),
@@ -312,14 +275,25 @@ class _AddExpenseFormState extends ConsumerState<AddExpenseForm> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: _saveExpense,
-                  child: Text(
-                    isEditing ? 'Update Expense' : 'Save Expense',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  onPressed: addExpenseState.isLoading ? null : _handleSaveExpense,
+                  child: addExpenseState.isLoading
+                      ? SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).primaryColor,
+                            ),
+                          ),
+                        )
+                      : Text(
+                          isEditing ? 'Update Expense' : 'Save Expense',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
             ],
