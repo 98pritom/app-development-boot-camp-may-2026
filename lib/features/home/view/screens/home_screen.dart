@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
-import '../../../../core/models/expense.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../../../add_expense/view/screens/add_expense_screen.dart';
 import '../../../insights/view/screens/insights_screen.dart';
 import '../../view_model/home_view_model.dart';
@@ -27,7 +24,7 @@ class HomeScreen extends ConsumerWidget {
       body: IndexedStack(
         index: currentIndex,
         children: [
-          _buildExpensesTab(context),
+          _buildExpensesTab(context, ref),
           const InsightsScreen(),
         ],
       ),
@@ -62,23 +59,23 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildExpensesTab(BuildContext context) {
-    return ValueListenableBuilder<Box<Expense>>(
-      valueListenable: Hive.box<Expense>(AppConstants.expenseBoxName).listenable(),
-      builder: (context, box, _) {
-        final expenses = box.values.toList(growable: false);
-        
-        return Column(
-          children: [
-            ExpenseSummary(expenses: expenses),
-            Expanded(
-              child: expenses.isEmpty
-                  ? _buildEmptyState(context)
-                  : ExpenseListView(expenses: expenses),
-            ),
-          ],
-        );
-      },
+  Widget _buildExpensesTab(BuildContext context, WidgetRef ref) {
+    final homeState = ref.watch(homeProvider);
+    final expenses = homeState.expenses;
+
+    if (homeState.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
+      children: [
+        ExpenseSummary(expenses: expenses),
+        Expanded(
+          child: expenses.isEmpty
+              ? _buildEmptyState(context)
+              : ExpenseListView(expenses: expenses),
+        ),
+      ],
     );
   }
 
@@ -90,7 +87,7 @@ class HomeScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: const Color(0xFF0066CC).withValues(alpha: 0.1),
+              color: const Color(0xFF0066CC).withAlpha(25),
               borderRadius: BorderRadius.circular(100),
             ),
             child: const Icon(
@@ -103,8 +100,8 @@ class HomeScreen extends ConsumerWidget {
           Text(
             'No Expenses Yet',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+                  fontWeight: FontWeight.w700,
+                ),
           ),
           const SizedBox(height: 8),
           Padding(

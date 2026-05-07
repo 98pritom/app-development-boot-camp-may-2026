@@ -1,6 +1,15 @@
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
+enum ExpenseCategory {
+  food,
+  transport,
+  shopping,
+  entertainment,
+  health,
+  other,
+}
+
 class Expense {
   Expense({
     required this.id,

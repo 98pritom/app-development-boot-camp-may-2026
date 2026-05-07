@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../screens/add_expense_form.dart';
+import 'add_expense_form.dart';
 
-class AddExpenseScreen extends ConsumerWidget {
+class AddExpenseScreen extends StatelessWidget {
   const AddExpenseScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return const AddExpenseForm();
   }
 }

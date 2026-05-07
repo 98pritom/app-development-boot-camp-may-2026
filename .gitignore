@@ -44,4 +44,10 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# GitHub Copilot & IDE Instructions
+.github-copilot-instructions.md
+copilot-instructions.md
+.instructions.md
+.prompt.md
+
 FEATURES.md

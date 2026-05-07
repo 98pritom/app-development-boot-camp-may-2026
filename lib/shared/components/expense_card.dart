@@ -15,6 +15,15 @@ class ExpenseCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
+  ExpenseCategory _parseCategory(String value) {
+    for (final category in ExpenseCategory.values) {
+      if (category.name == value) {
+        return category;
+      }
+    }
+    return ExpenseCategory.other;
+  }
+
   String _formatDate(DateTime date) {
     final month = date.month.toString().padLeft(2, '0');
     final day = date.day.toString().padLeft(2, '0');
@@ -23,9 +32,10 @@ class ExpenseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final category = _parseCategory(expense.category);
     final noteText = expense.note.isEmpty ? 'No note' : expense.note;
-    final categoryColor = CategoryHelper.getCategoryColor(expense.category);
-    final categoryIcon = CategoryHelper.getCategoryIcon(expense.category);
+    final categoryColor = CategoryHelper.getCategoryColor(category);
+    final categoryIcon = CategoryHelper.getCategoryIcon(category);
 
     return Card(
       child: InkWell(
@@ -73,7 +83,7 @@ class ExpenseCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            expense.category,
+                            CategoryHelper.getCategoryLabel(category),
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,

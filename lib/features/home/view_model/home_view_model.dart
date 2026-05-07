@@ -1,31 +1,34 @@
-import 'package:riverpod/riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-class HomeState {
-  final int currentTabIndex;
+import '../../../core/models/expense.dart';
+import '../../../core/constants/app_constants.dart';
+import 'home_state.dart';
 
-  const HomeState({
-    this.currentTabIndex = 0,
-  });
+final homeProvider = NotifierProvider<HomeViewModel, HomeState>(HomeViewModel.new);
 
-  HomeState copyWith({
-    int? currentTabIndex,
-  }) {
+class HomeViewModel extends Notifier<HomeState> {
+  @override
+  HomeState build() {
+    final box = Hive.box<Expense>(AppConstants.expenseBoxName);
+
+    box.listenable().addListener(() {
+      _updateExpenses(box.values.toList(growable: false));
+    });
+
     return HomeState(
-      currentTabIndex: currentTabIndex ?? this.currentTabIndex,
+      expenses: box.values.toList(growable: false),
+      isLoading: false,
     );
   }
-}
 
-final homeProvider = NotifierProvider<HomeNotifier, HomeState>(
-  HomeNotifier.new,
-);
-
-class HomeNotifier extends Notifier<HomeState> {
-  @override
-  HomeState build() => const HomeState();
+  void _updateExpenses(List<Expense> expenses) {
+    // Sort by newest first (most recent date first)
+    final sorted = expenses.toList()..sort((a, b) => b.date.compareTo(a.date));
+    state = state.copyWith(expenses: sorted, isLoading: false);
+  }
 
   void setTabIndex(int index) {
-    if (index == state.currentTabIndex) return;
     state = state.copyWith(currentTabIndex: index);
   }
 }

@@ -12,10 +12,20 @@ class ExpenseDetailScreen extends StatelessWidget {
 
   final Expense expense;
 
+  ExpenseCategory _parseCategory(String value) {
+    for (final category in ExpenseCategory.values) {
+      if (category.name == value) {
+        return category;
+      }
+    }
+    return ExpenseCategory.other;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final categoryColor = CategoryHelper.getCategoryColor(expense.category);
-    final categoryIcon = CategoryHelper.getCategoryIcon(expense.category);
+    final category = _parseCategory(expense.category);
+    final categoryColor = CategoryHelper.getCategoryColor(category);
+    final categoryIcon = CategoryHelper.getCategoryIcon(category);
 
     return Scaffold(
       appBar: AppBar(
@@ -47,24 +57,27 @@ class ExpenseDetailScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Amount',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.9),
+              child: SizedBox(
+                width: double.infinity,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Amount',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '৳${expense.amount.toStringAsFixed(2)}',
-                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
+                    const SizedBox(height: 8),
+                    Text(
+                      '৳${expense.amount.toStringAsFixed(2)}',
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 24),
@@ -115,7 +128,7 @@ class ExpenseDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          expense.category,
+                          category.name,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ],

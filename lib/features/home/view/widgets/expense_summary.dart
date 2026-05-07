@@ -13,6 +13,7 @@ class ExpenseSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
+    final previousMonth = DateTime(now.year, now.month - 1, 1);
     final total = expenses.fold<double>(
       0,
       (sum, expense) => sum + expense.amount,
@@ -24,6 +25,18 @@ class ExpenseSummary extends StatelessWidget {
               expense.date.month == now.month,
         )
         .fold<double>(0, (sum, expense) => sum + expense.amount);
+    final previousMonthTotal = expenses
+        .where(
+          (expense) =>
+              expense.date.year == previousMonth.year &&
+              expense.date.month == previousMonth.month,
+        )
+        .fold<double>(0, (sum, expense) => sum + expense.amount);
+    final isSpendingIncreased = monthlyTotal > previousMonthTotal;
+    final trendIcon = isSpendingIncreased ? Icons.trending_up : Icons.trending_down;
+    final trendColor =
+        isSpendingIncreased ? const Color(0xFFE74C3C) : const Color(0xFF2ECC71);
+    final trendText = isSpendingIncreased ? 'Higher spending' : 'Lower spending';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -49,24 +62,27 @@ class ExpenseSummary extends StatelessWidget {
                 ),
               ],
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Total Balance',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.9),
+            child: SizedBox(
+              width: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'Total Balance',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '৳${total.toStringAsFixed(2)}',
-                  style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(height: 8),
+                  Text(
+                    '৳${total.toStringAsFixed(2)}',
+                    style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -138,9 +154,9 @@ class ExpenseSummary extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            Icons.trending_up,
-                            size: 16,
-                            color: const Color(0xFF6C5CE7),
+                            trendIcon,
+                            size: 18,
+                            color: trendColor,
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -153,9 +169,24 @@ class ExpenseSummary extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text(
-                        monthlyTotal > 10000 ? '📈' : '📉',
-                        style: const TextStyle(fontSize: 20),
+                      Row(
+                        children: [
+                          Icon(
+                            trendIcon,
+                            size: 30,
+                            color: trendColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              trendText,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: trendColor,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
